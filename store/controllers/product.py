@@ -7,7 +7,20 @@ from store.schemas.product import ProductIn, ProductOut, ProductUpdate, ProductU
 from store.usecases.product import ProductUsecase
 
 router = APIRouter(tags=["products"])
+usecase = ProductUsecase()
 
+@router.patch(path="/{id}", status_code=status.HTTP_200_OK)
+async def patch(
+    id: UUID4 = Path(alias="id"),
+    body: ProductUpdate = Body(...),
+    usecase: ProductUsecase = Depends(ProductUsecase),  # Dependência corrigida
+) -> ProductUpdateOut:
+    try:
+        product = await usecase.update(id=id, body=body)
+        product.updated_at = datetime.now()  # Atualiza o updated_at com o timestamp atual
+        return product
+    except NotFoundException as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 @router.post(path="/", status_code=status.HTTP_201_CREATED)
 async def post(
