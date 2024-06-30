@@ -32,9 +32,16 @@ class ProductUsecase:
         return [ProductOut(**item) async for item in self.collection.find()]
 
     async def update(self, id: UUID, body: ProductUpdate) -> ProductUpdateOut:
+        product = await self.collection.find_one({"id": id})
+        if not product:
+            raise NotFoundException(message=f"Product not found with id: {id}")
+
+        body_dict = body.model_dump(exclude_none=True)
+        body_dict["updated_at"] = datetime.now()
+
         result = await self.collection.find_one_and_update(
             filter={"id": id},
-            update={"$set": body.model_dump(exclude_none=True)},
+            update={"$set": body_dict},
             return_document=pymongo.ReturnDocument.AFTER,
         )
 
@@ -43,11 +50,11 @@ class ProductUsecase:
     async def delete(self, id: UUID) -> bool:
         product = await self.collection.find_one({"id": id})
         if not product:
-            raise NotFoundException(message=f"Product not found with filter: {id}")
+            raise NotFoundException(message=f"Product not found with id: {id}")
 
         result = await self.collection.delete_one({"id": id})
 
-        return True if result.deleted_count > 0 else False
+        return result.deleted_count > 0
 
 
 product_usecase = ProductUsecase()
